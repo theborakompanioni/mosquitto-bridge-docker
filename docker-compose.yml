@@ -14,6 +14,8 @@ services:
     image: eclipse-mosquitto:1.4.12
     container_name: mosquitto-one1
     restart: unless-stopped
+    networks:
+      - mqtt
     ports:
       - "1883:1883"
       - "9001:9001"
@@ -22,13 +24,15 @@ services:
     image: eclipse-mosquitto:1.4.12
     container_name: mosquitto-two1
     restart: unless-stopped
+    networks:
+      - mqtt
     ports:
       - "1884:1883"
       - "9002:9001"
 
   mqtt-bridge:
     build:
-      context: ./dockerfiles/mosquitto-bridge
+      context: ./dockerfiles/mqtt-bridge
       dockerfile: Dockerfile
     container_name: mosquitto-bridge1
     restart: unless-stopped
@@ -38,10 +42,29 @@ services:
     links:
       - mqtt-one:mqtt-one
       - mqtt-two:mqtt-two
-    ports:
-      - "1885:1883"
-      - "9003:9001"
+    networks:
+      - mqtt
+    #ports:
+    #  - "1885:1883"
+    #  - "9003:9001"
     volumes:
-      - ./config:/mqtt/config:Z
-      - ./docker-data/mosquitto/data:/mqtt/data:Z
-      - ./docker-data/mosquitto/log:/mqtt/log:Z
+      - ./dockerfiles/mqtt-bridge/config:/mqtt/config:Z
+      - ./docker-data/mqtt-bridge/data:/mqtt/data:Z
+      - ./docker-data/mqtt-bridge/log:/mqtt/log:Z
+
+  node-red:
+    image: jamesbrink/node-red:0.16.2
+    container_name: mosquitto-node-red1
+    restart: unless-stopped
+    depends_on:
+      - mqtt-one
+      - mqtt-two
+    links:
+      - mqtt-one:mqtt-one
+      - mqtt-two:mqtt-two
+    networks:
+      - mqtt
+    ports:
+      - "11880:1880"
+    volumes:
+      - ./docker-data/node-red/data:/data:Z
