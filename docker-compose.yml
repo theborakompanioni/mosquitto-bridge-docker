@@ -1,0 +1,47 @@
+version: '2'
+networks:
+  mqtt:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.238.0/24
+        gateway: 172.16.238.254
+        ip-range: 172.16.238.0/24
+
+services:
+  mqtt-one:
+    image: eclipse-mosquitto:1.4.12
+    container_name: mosquitto-one1
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  mqtt-two:
+    image: eclipse-mosquitto:1.4.12
+    container_name: mosquitto-two1
+    restart: unless-stopped
+    ports:
+      - "1884:1883"
+      - "9002:9001"
+
+  mqtt-bridge:
+    build:
+      context: ./dockerfiles/mosquitto-bridge
+      dockerfile: Dockerfile
+    container_name: mosquitto-bridge1
+    restart: unless-stopped
+    depends_on:
+      - mqtt-one
+      - mqtt-two
+    links:
+      - mqtt-one:mqtt-one
+      - mqtt-two:mqtt-two
+    ports:
+      - "1885:1883"
+      - "9003:9001"
+    volumes:
+      - ./config:/mqtt/config:Z
+      - ./docker-data/mosquitto/data:/mqtt/data:Z
+      - ./docker-data/mosquitto/log:/mqtt/log:Z
